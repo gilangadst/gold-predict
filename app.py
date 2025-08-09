@@ -75,8 +75,6 @@ st.sidebar.info("""
 **Catatan:**
 - Yahoo Finance menyediakan data trading days
 - Hari libur dan weekend tidak termasuk
-- Untuk 90 hari, dibutuhkan ~130 hari kalender
-- Jika data kurang, gunakan opsi alternatif
 - **Prediksi hanya 1 hari ke depan**
 """)
 
@@ -343,7 +341,7 @@ with col2:
     - Arsitektur: Long Short-Term Memory
     - Input: 30 hari data historis
     - Output: Prediksi 1 hari ke depan
-    - Metrik: Mean Squared Error (MSE)
+    - Metrik: MAE, MSE, MAPE, dan RMSE
     - **Batasan**: Hanya 1 hari prediksi ke depan
     """)
     
@@ -357,14 +355,6 @@ with col2:
         st.metric("Maximum", f"${np.max(data_for_stats):,.2f}")
         st.metric("Volatilitas", f"{np.std(data_for_stats):,.2f}")
     
-    st.markdown("### ⚠️ Disclaimer")
-    st.warning("""
-    **Peringatan:**
-    - Prediksi ini hanya untuk tujuan edukasi
-    - Harga emas dipengaruhi banyak faktor
-    - Tidak ada jaminan akurasi prediksi
-    - Konsultasikan dengan ahli keuangan untuk keputusan investasi
-    """)
 
 # Footer
 st.markdown("---")
