@@ -6,7 +6,7 @@ symbol = 'GC=F'
 
 # Rentang waktu: 1 Juni 2020 – 1 Juni 2025
 start_date = '2005-01-01'
-end_date = '2025-06-01'
+end_date = '2025-08-01'
 
 # Ambil data
 data_emas = yf.download(symbol, start=start_date, end=end_date, interval='1d')
