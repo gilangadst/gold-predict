@@ -163,7 +163,7 @@ with col1:
             # Ambil prediksi untuk tanggal target
             predicted_price = predicted_prices[-1]
         
-        # Display prediction
+        
         st.markdown("### 🎯 Hasil Prediksi")
         
         # Tampilkan info multi-step prediction jika lebih dari 1 hari
