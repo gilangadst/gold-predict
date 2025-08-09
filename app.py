@@ -145,25 +145,73 @@ with col1:
         col_pred1, col_pred2, col_pred3 = st.columns(3)
         
         with col_pred1:
+            # Calculate previous day change
+            prev_change = close_prices[-1] - close_prices[-2] if len(close_prices) > 1 else 0
+            prev_change_percent = ((prev_change) / close_prices[-2]) * 100 if len(close_prices) > 1 and close_prices[-2] != 0 else 0
+            
+            # Create arrow indicator for previous day change
+            if prev_change > 0:
+                delta_arrow = "⬆️"
+                delta_color = "normal"
+            elif prev_change < 0:
+                delta_arrow = "⬇️"
+                delta_color = "inverse"
+            else:
+                delta_arrow = "➡️"
+                delta_color = "normal"
+            
             st.metric(
                 label="Harga Terakhir",
                 value=f"${close_prices[-1]:,.2f}",
-                delta=f"${close_prices[-1] - close_prices[-2]:,.2f}" if len(close_prices) > 1 else None
+                delta=f"{delta_arrow} ${prev_change:+,.2f} ({prev_change_percent:+.2f}%)",
+                delta_color=delta_color
             )
         
         with col_pred2:
+            # Calculate prediction change
+            pred_change = predicted_price - close_prices[-1]
+            pred_change_percent = ((pred_change) / close_prices[-1]) * 100
+            
+            # Create arrow indicator for prediction
+            if pred_change > 0:
+                delta_arrow = "⬆️"
+                delta_color = "normal"
+            elif pred_change < 0:
+                delta_arrow = "⬇️"
+                delta_color = "inverse"
+            else:
+                delta_arrow = "➡️"
+                delta_color = "normal"
+            
             st.metric(
                 label=f"Prediksi {target_date.strftime('%d %B %Y')}",
                 value=f"${predicted_price:,.2f}",
-                delta=f"${predicted_price - close_prices[-1]:,.2f}"
+                delta=f"{delta_arrow} ${pred_change:+,.2f} ({pred_change_percent:+.2f}%)",
+                delta_color=delta_color
             )
         
         with col_pred3:
             change_percent = ((predicted_price - close_prices[-1]) / close_prices[-1]) * 100
+            
+            # Create arrow indicator for percentage change
+            if change_percent > 0:
+                delta_arrow = "⬆️"
+                delta_color = "normal"
+                status_text = "Naik"
+            elif change_percent < 0:
+                delta_arrow = "⬇️"
+                delta_color = "inverse"
+                status_text = "Turun"
+            else:
+                delta_arrow = "➡️"
+                delta_color = "normal"
+                status_text = "Stabil"
+            
             st.metric(
                 label="Perubahan (%)",
                 value=f"{change_percent:+.2f}%",
-                delta_color="normal" if abs(change_percent) < 2 else ("inverse" if change_percent < 0 else "normal")
+                delta=f"{delta_arrow} {status_text}",
+                delta_color=delta_color
             )
         
         # Plot dengan Plotly
@@ -276,25 +324,73 @@ with col1:
                     col_pred1, col_pred2, col_pred3 = st.columns(3)
                     
                     with col_pred1:
+                        # Calculate previous day change
+                        prev_change = close_prices[-1] - close_prices[-2] if len(close_prices) > 1 else 0
+                        prev_change_percent = ((prev_change) / close_prices[-2]) * 100 if len(close_prices) > 1 and close_prices[-2] != 0 else 0
+                        
+                        # Create arrow indicator for previous day change
+                        if prev_change > 0:
+                            delta_arrow = "⬆️"
+                            delta_color = "normal"
+                        elif prev_change < 0:
+                            delta_arrow = "⬇️"
+                            delta_color = "inverse"
+                        else:
+                            delta_arrow = "➡️"
+                            delta_color = "normal"
+                        
                         st.metric(
                             label="Harga Terakhir",
                             value=f"${close_prices[-1]:,.2f}",
-                            delta=f"${close_prices[-1] - close_prices[-2]:,.2f}" if len(close_prices) > 1 else None
+                            delta=f"{delta_arrow} ${prev_change:+,.2f} ({prev_change_percent:+.2f}%)",
+                            delta_color=delta_color
                         )
                     
                     with col_pred2:
+                        # Calculate prediction change
+                        pred_change = predicted_price - close_prices[-1]
+                        pred_change_percent = ((pred_change) / close_prices[-1]) * 100
+                        
+                        # Create arrow indicator for prediction
+                        if pred_change > 0:
+                            delta_arrow = "⬆️"
+                            delta_color = "normal"
+                        elif pred_change < 0:
+                            delta_arrow = "⬇️"
+                            delta_color = "inverse"
+                        else:
+                            delta_arrow = "➡️"
+                            delta_color = "normal"
+                        
                         st.metric(
                             label=f"Prediksi {target_date.strftime('%d %B %Y')}",
                             value=f"${predicted_price:,.2f}",
-                            delta=f"${predicted_price - close_prices[-1]:,.2f}"
+                            delta=f"{delta_arrow} ${pred_change:+,.2f} ({pred_change_percent:+.2f}%)",
+                            delta_color=delta_color
                         )
                     
                     with col_pred3:
                         change_percent = ((predicted_price - close_prices[-1]) / close_prices[-1]) * 100
+                        
+                        # Create arrow indicator for percentage change
+                        if change_percent > 0:
+                            delta_arrow = "⬆️"
+                            delta_color = "normal"
+                            status_text = "Naik"
+                        elif change_percent < 0:
+                            delta_arrow = "⬇️"
+                            delta_color = "inverse"
+                            status_text = "Turun"
+                        else:
+                            delta_arrow = "➡️"
+                            delta_color = "normal"
+                            status_text = "Stabil"
+                        
                         st.metric(
                             label="Perubahan (%)",
                             value=f"{change_percent:+.2f}%",
-                            delta_color="normal" if abs(change_percent) < 2 else ("inverse" if change_percent < 0 else "normal")
+                            delta=f"{delta_arrow} {status_text}",
+                            delta_color=delta_color
                         )
                     
                     # Plot dengan data yang tersedia
