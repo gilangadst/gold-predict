@@ -29,22 +29,30 @@ model = load_lstm_model()
 # Sidebar untuk input parameter
 st.sidebar.markdown("### ⚙️ Parameter Prediksi")
 
-# 1. Input tanggal target
+# 1. Input tanggal target - hanya 1 hari ke depan
 st.sidebar.markdown("#### 📅 Tanggal Target Prediksi")
 
 def next_weekday(d):
-    while d.weekday() >= 5:  # 5 = Sabtu, 6 = Minggu
-        d += timedelta(days=1)
-    return d
+    """Return the next weekday if the given date falls on a weekend"""
+    result = d
+    while result.weekday() >= 5:  # 5 = Sabtu, 6 = Minggu
+        result += timedelta(days=1)
+    return result
 
+# Calculate the target date once to ensure consistency
+tomorrow = datetime.now().date() + timedelta(days=1)
+target_date_default = next_weekday(tomorrow)
+
+# Ensure all date values are the same for the date_input
 target_date = st.sidebar.date_input(
     "Pilih tanggal yang ingin diprediksi:",
-    value=next_weekday(datetime.now().date() + timedelta(days=1)),
-    min_value=datetime.now().date() + timedelta(days=1),
-    max_value=datetime.now().date() + timedelta(days=7),
-    help="Pilih tanggal di masa depan untuk prediksi harga emas (maksimal 7 hari)"
+    value=target_date_default,
+    min_value=target_date_default,
+    max_value=target_date_default,
+    help="Pilih tanggal untuk prediksi harga emas (hanya 1 hari ke depan)"
 )
 
+# Additional check for weekends (in case the date_input somehow returns a weekend)
 if target_date.weekday() >= 5:
     st.sidebar.warning("Tanggal otomatis digeser ke hari kerja terdekat.")
     target_date = next_weekday(target_date)
@@ -69,7 +77,7 @@ st.sidebar.info("""
 - Hari libur dan weekend tidak termasuk
 - Untuk 90 hari, dibutuhkan ~130 hari kalender
 - Jika data kurang, gunakan opsi alternatif
-- **Prediksi maksimal 7 hari ke depan**
+- **Prediksi hanya 1 hari ke depan**
 """)
 
 window_days = int(window_option[0])
@@ -113,7 +121,7 @@ with col1:
         })
         st.dataframe(df_display, use_container_width=True)
         
-        # Prediksi
+        # Prediksi 1 hari ke depan
         scaler = MinMaxScaler(feature_range=(0, 1))
         close_prices_reshaped = np.array(close_prices).reshape(-1, 1)
         scaler.fit(close_prices_reshaped)
@@ -130,45 +138,11 @@ with col1:
         else:
             X_input = np.reshape(close_scaled, (1, 30, 1))
         
-        # Hitung berapa hari ke depan yang diprediksi
-        days_ahead = (target_date - datetime.now().date()).days
-        
-        # Validasi maksimal 7 hari
-        if days_ahead > 7:
-            st.error("❌ **Error**: Prediksi maksimal hanya 7 hari ke depan!")
-            st.stop()
-        
-        # Multi-step prediction untuk tanggal yang lebih jauh
-        if days_ahead == 1:
-            # Prediksi 1 hari ke depan
-            prediction = model.predict(X_input)
-            predicted_price = scaler.inverse_transform(prediction)[0][0]
-        else:
-            # Prediksi multi-step untuk tanggal yang lebih jauh
-            current_input = X_input.copy()
-            predicted_prices = []
-            
-            for day in range(days_ahead):
-                # Prediksi 1 hari ke depan
-                prediction = model.predict(current_input)
-                predicted_price_step = scaler.inverse_transform(prediction)[0][0]
-                predicted_prices.append(predicted_price_step)
-                
-                # Update input untuk prediksi berikutnya (rolling window)
-                # Tambahkan prediksi ke input dan geser window
-                predicted_scaled = scaler.transform([[predicted_price_step]])
-                current_input = np.roll(current_input, -1, axis=1)
-                current_input[0, -1, 0] = predicted_scaled[0, 0]
-            
-            # Ambil prediksi untuk tanggal target
-            predicted_price = predicted_prices[-1]
-        
+        # Prediksi 1 hari ke depan
+        prediction = model.predict(X_input)
+        predicted_price = scaler.inverse_transform(prediction)[0][0]
         
         st.markdown("### 🎯 Hasil Prediksi")
-        
-        # Tampilkan info multi-step prediction jika lebih dari 1 hari
-        if days_ahead > 1:
-            st.info(f"📈 **Multi-step Prediction**: Model memprediksi {days_ahead} hari ke depan menggunakan rolling window approach")
         
         col_pred1, col_pred2, col_pred3 = st.columns(3)
         
@@ -215,43 +189,18 @@ with col1:
             row=1, col=1
         )
         
-        # Plot prediksi
-        if days_ahead == 1:
-            # Prediksi 1 hari
-            fig.add_trace(
-                go.Scatter(
-                    x=[dates[-1].strftime('%Y-%m-%d'), target_date.strftime('%Y-%m-%d')],
-                    y=[close_prices[-1], predicted_price],
-                    mode='lines+markers',
-                    name='Prediksi',
-                    line=dict(color='red', width=3, dash='dash'),
-                    marker=dict(size=8, symbol='diamond')
-                ),
-                row=1, col=1
-            )
-        else:
-            # Multi-step prediction - tampilkan semua prediksi intermediate
-            prediction_dates = []
-            prediction_values = [close_prices[-1]]  # Mulai dari harga terakhir
-            
-            current_date = datetime.now().date()
-            for i in range(days_ahead):
-                current_date += timedelta(days=1)
-                prediction_dates.append(current_date.strftime('%Y-%m-%d'))
-                if i < len(predicted_prices):
-                    prediction_values.append(predicted_prices[i])
-            
-            fig.add_trace(
-                go.Scatter(
-                    x=prediction_dates,
-                    y=prediction_values,
-                    mode='lines+markers',
-                    name='Prediksi Multi-step',
-                    line=dict(color='red', width=3, dash='dash'),
-                    marker=dict(size=8, symbol='diamond')
-                ),
-                row=1, col=1
-            )
+        # Plot prediksi 1 hari
+        fig.add_trace(
+            go.Scatter(
+                x=[dates[-1].strftime('%Y-%m-%d'), target_date.strftime('%Y-%m-%d')],
+                y=[close_prices[-1], predicted_price],
+                mode='lines+markers',
+                name='Prediksi',
+                line=dict(color='red', width=3, dash='dash'),
+                marker=dict(size=8, symbol='diamond')
+            ),
+            row=1, col=1
+        )
         
         # Bar chart perubahan
         fig.add_trace(
@@ -277,32 +226,6 @@ with col1:
         fig.update_yaxes(title_text="Harga (USD)", row=2, col=1)
         
         st.plotly_chart(fig, use_container_width=True)
-        
-        # Tampilkan tabel prediksi intermediate untuk multi-step
-        if days_ahead > 1 and 'predicted_prices' in locals():
-            st.markdown("### 📊 Prediksi Intermediate")
-            st.info("Berikut adalah prediksi harga emas untuk setiap hari dari sekarang hingga tanggal target:")
-            
-            # Buat tabel prediksi intermediate
-            intermediate_dates = []
-            intermediate_prices = []
-            
-            current_date = datetime.now().date()
-            for i in range(days_ahead):
-                current_date += timedelta(days=1)
-                intermediate_dates.append(current_date.strftime('%Y-%m-%d'))
-                if i < len(predicted_prices):
-                    intermediate_prices.append(predicted_prices[i])
-            
-            df_intermediate = pd.DataFrame({
-                'Tanggal': intermediate_dates,
-                'Prediksi Harga (USD)': intermediate_prices,
-                'Perubahan': [f"{((predicted_prices[i] - close_prices[-1]) / close_prices[-1] * 100):+.2f}%" if i < len(predicted_prices) else "N/A" for i in range(days_ahead)]
-            })
-            
-            st.dataframe(df_intermediate, use_container_width=True)
-            
-            st.warning("⚠️ **Peringatan**: Prediksi multi-step untuk tanggal jauh mungkin kurang akurat karena error compounding. Semakin jauh tanggal prediksi, semakin besar kemungkinan deviasi dari nilai sebenarnya. Prediksi dioptimalkan untuk maksimal 7 hari ke depan.")
         
     else:
         st.error(f"❌ Data tidak cukup! Hanya tersedia {len(data)} hari, dibutuhkan minimal {window_days} hari.")
@@ -421,7 +344,7 @@ with col2:
     - Input: 30 hari data historis
     - Output: Prediksi 1 hari ke depan
     - Metrik: Mean Squared Error (MSE)
-    - **Batasan**: Maksimal 7 hari prediksi ke depan
+    - **Batasan**: Hanya 1 hari prediksi ke depan
     """)
     
     st.markdown("### 📊 Statistik")
