@@ -21,7 +21,7 @@ st.markdown("""
 # Load model LSTM
 @st.cache_resource
 def load_lstm_model():
-    model = load_model('./model/model.h5')
+    model = load_model('./model.h5')
     return model
 
 model = load_lstm_model()
@@ -45,11 +45,11 @@ target_date_default = next_weekday(tomorrow)
 
 # Ensure all date values are the same for the date_input
 target_date = st.sidebar.date_input(
-    "Pilih tanggal yang ingin diprediksi:",
+    "Tanggal yang akan diprediksi:",
     value=target_date_default,
     min_value=target_date_default,
     max_value=target_date_default,
-    help="Pilih tanggal untuk prediksi harga emas (hanya 1 hari ke depan)"
+    help="Tanggal untuk prediksi harga emas (hanya 1 hari ke depan)"
 )
 
 # Additional check for weekends (in case the date_input somehow returns a weekend)
@@ -58,16 +58,15 @@ if target_date.weekday() >= 5:
     target_date = next_weekday(target_date)
 
 # 2. Pilihan window data historis
-st.sidebar.markdown("#### 📊 Window Data Historis")
-window_option = st.sidebar.selectbox(
-    "Pilih periode data historis:",
-    options=[
-        ("7", "7 hari terakhir (Short-term)"),
-        ("30", "30 hari terakhir (Mid-term)")
-    ],
-    format_func=lambda x: x[1],
-    help="Semakin panjang periode, semakin banyak pola yang dianalisis"
-)
+# st.sidebar.markdown("#### 📊 Window Data Historis")
+# window_option = st.sidebar.selectbox(
+#     "Pilih periode data historis:",
+#     options=[
+#         ("7", "7 hari terakhir (Short-term)")
+#     ],
+#     format_func=lambda x: x[1]
+# )
+window_days = 7 # default: 30 hari terakhir
 
 # Info tentang data availability
 st.sidebar.markdown("#### ℹ️ Info Data")
@@ -77,8 +76,6 @@ st.sidebar.info("""
 - Hari libur dan weekend tidak termasuk
 - **Prediksi hanya 1 hari ke depan**
 """)
-
-window_days = int(window_option[0])
 
 # 3. Info data source
 st.sidebar.markdown("#### 📈 Sumber Data")
@@ -149,22 +146,11 @@ with col1:
             prev_change = close_prices[-1] - close_prices[-2] if len(close_prices) > 1 else 0
             prev_change_percent = ((prev_change) / close_prices[-2]) * 100 if len(close_prices) > 1 and close_prices[-2] != 0 else 0
             
-            # Create arrow indicator for previous day change
-            if prev_change > 0:
-                delta_arrow = "⬆️"
-                delta_color = "normal"
-            elif prev_change < 0:
-                delta_arrow = "⬇️"
-                delta_color = "inverse"
-            else:
-                delta_arrow = "➡️"
-                delta_color = "normal"
-            
             st.metric(
                 label="Harga Terakhir",
                 value=f"${close_prices[-1]:,.2f}",
-                delta=f"{delta_arrow} ${prev_change:+,.2f} ({prev_change_percent:+.2f}%)",
-                delta_color=delta_color
+                delta=round(prev_change, 2),
+                help=f"{prev_change:+,.2f} ({prev_change_percent:+.2f}%)"
             )
         
         with col_pred2:
@@ -172,55 +158,25 @@ with col1:
             pred_change = predicted_price - close_prices[-1]
             pred_change_percent = ((pred_change) / close_prices[-1]) * 100
             
-            # Create arrow indicator for prediction
-            if pred_change > 0:
-                delta_arrow = "⬆️"
-                delta_color = "normal"
-            elif pred_change < 0:
-                delta_arrow = "⬇️"
-                delta_color = "inverse"
-            else:
-                delta_arrow = "➡️"
-                delta_color = "normal"
-            
             st.metric(
                 label=f"Prediksi {target_date.strftime('%d %B %Y')}",
                 value=f"${predicted_price:,.2f}",
-                delta=f"{delta_arrow} ${pred_change:+,.2f} ({pred_change_percent:+.2f}%)",
-                delta_color=delta_color
+                delta=round(pred_change, 2),
+                help=f"{pred_change:+,.2f} ({pred_change_percent:+.2f}%)"
             )
         
         with col_pred3:
             change_percent = ((predicted_price - close_prices[-1]) / close_prices[-1]) * 100
             
-            # Create arrow indicator for percentage change
-            if change_percent > 0:
-                delta_arrow = "⬆️"
-                delta_color = "normal"
-                status_text = "Naik"
-            elif change_percent < 0:
-                delta_arrow = "⬇️"
-                delta_color = "inverse"
-                status_text = "Turun"
-            else:
-                delta_arrow = "➡️"
-                delta_color = "normal"
-                status_text = "Stabil"
-            
             st.metric(
                 label="Perubahan (%)",
                 value=f"{change_percent:+.2f}%",
-                delta=f"{delta_arrow} {status_text}",
-                delta_color=delta_color
+                delta=round(change_percent, 2),
+                help="Naik" if change_percent > 0 else ("Turun" if change_percent < 0 else "Stabil")
             )
         
         # Plot dengan Plotly
-        fig = make_subplots(
-            rows=2, cols=1,
-            subplot_titles=('Harga Emas Historis', 'Prediksi vs Aktual'),
-            vertical_spacing=0.1,
-            row_heights=[0.7, 0.3]
-        )
+        fig = go.Figure()
         
         # Plot historis
         fig.add_trace(
@@ -231,8 +187,7 @@ with col1:
                 name='Harga Historis',
                 line=dict(color='#FFD700', width=2),
                 marker=dict(size=6)
-            ),
-            row=1, col=1
+            )
         )
         
         # Plot prediksi 1 hari
@@ -244,32 +199,17 @@ with col1:
                 name='Prediksi',
                 line=dict(color='red', width=3, dash='dash'),
                 marker=dict(size=8, symbol='diamond')
-            ),
-            row=1, col=1
-        )
-        
-        # Bar chart perubahan
-        fig.add_trace(
-            go.Bar(
-                x=['Harga Terakhir', 'Prediksi'],
-                y=[close_prices[-1], predicted_price],
-                name='Perbandingan',
-                marker_color=['#FFD700', '#FF6B6B']
-            ),
-            row=2, col=1
+            )
         )
         
         fig.update_layout(
-            height=600,
+            height=500,
             title_text=f"Prediksi Harga Emas untuk {target_date.strftime('%d %B %Y')}",
             showlegend=True,
-            hovermode='x unified'
+            hovermode='x unified',
+            xaxis_title="Tanggal",
+            yaxis_title="Harga (USD)"
         )
-        
-        fig.update_xaxes(title_text="Tanggal", row=1, col=1)
-        fig.update_yaxes(title_text="Harga (USD)", row=1, col=1)
-        fig.update_xaxes(title_text="", row=2, col=1)
-        fig.update_yaxes(title_text="Harga (USD)", row=2, col=1)
         
         st.plotly_chart(fig, use_container_width=True)
         
@@ -327,70 +267,30 @@ with col1:
                         # Calculate previous day change
                         prev_change = close_prices[-1] - close_prices[-2] if len(close_prices) > 1 else 0
                         prev_change_percent = ((prev_change) / close_prices[-2]) * 100 if len(close_prices) > 1 and close_prices[-2] != 0 else 0
-                        
-                        # Create arrow indicator for previous day change
-                        if prev_change > 0:
-                            delta_arrow = "⬆️"
-                            delta_color = "normal"
-                        elif prev_change < 0:
-                            delta_arrow = "⬇️"
-                            delta_color = "inverse"
-                        else:
-                            delta_arrow = "➡️"
-                            delta_color = "normal"
-                        
                         st.metric(
                             label="Harga Terakhir",
                             value=f"${close_prices[-1]:,.2f}",
-                            delta=f"{delta_arrow} ${prev_change:+,.2f} ({prev_change_percent:+.2f}%)",
-                            delta_color=delta_color
+                            delta=round(prev_change, 2),
+                            help=f"{prev_change:+,.2f} ({prev_change_percent:+.2f}%)"
                         )
                     
                     with col_pred2:
-                        # Calculate prediction change
                         pred_change = predicted_price - close_prices[-1]
                         pred_change_percent = ((pred_change) / close_prices[-1]) * 100
-                        
-                        # Create arrow indicator for prediction
-                        if pred_change > 0:
-                            delta_arrow = "⬆️"
-                            delta_color = "normal"
-                        elif pred_change < 0:
-                            delta_arrow = "⬇️"
-                            delta_color = "inverse"
-                        else:
-                            delta_arrow = "➡️"
-                            delta_color = "normal"
-                        
                         st.metric(
                             label=f"Prediksi {target_date.strftime('%d %B %Y')}",
                             value=f"${predicted_price:,.2f}",
-                            delta=f"{delta_arrow} ${pred_change:+,.2f} ({pred_change_percent:+.2f}%)",
-                            delta_color=delta_color
+                            delta=round(pred_change, 2),
+                            help=f"{pred_change:+,.2f} ({pred_change_percent:+.2f}%)"
                         )
                     
                     with col_pred3:
                         change_percent = ((predicted_price - close_prices[-1]) / close_prices[-1]) * 100
-                        
-                        # Create arrow indicator for percentage change
-                        if change_percent > 0:
-                            delta_arrow = "⬆️"
-                            delta_color = "normal"
-                            status_text = "Naik"
-                        elif change_percent < 0:
-                            delta_arrow = "⬇️"
-                            delta_color = "inverse"
-                            status_text = "Turun"
-                        else:
-                            delta_arrow = "➡️"
-                            delta_color = "normal"
-                            status_text = "Stabil"
-                        
                         st.metric(
                             label="Perubahan (%)",
                             value=f"{change_percent:+.2f}%",
-                            delta=f"{delta_arrow} {status_text}",
-                            delta_color=delta_color
+                            delta=round(change_percent, 2),
+                            help="Naik" if change_percent > 0 else ("Turun" if change_percent < 0 else "Stabil")
                         )
                     
                     # Plot dengan data yang tersedia
@@ -435,7 +335,7 @@ with col2:
     st.info("""
     **Model LSTM yang digunakan:**
     - Arsitektur: Long Short-Term Memory
-    - Input: 30 hari data historis
+    - Input: 7 hari data historis
     - Output: Prediksi 1 hari ke depan
     - Metrik: MAE, MSE, MAPE, dan RMSE
     - **Batasan**: Hanya 1 hari prediksi ke depan
@@ -456,6 +356,6 @@ with col2:
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #666; padding: 20px;">
-    <p>© 2024 Prediksi Harga Emas LSTM | Dibuat dengan Streamlit & TensorFlow</p>
+    <p>© 2025 Prediksi Harga Emas LSTM | Dibuat dengan Streamlit & TensorFlow</p>
 </div>
 """, unsafe_allow_html=True)
