@@ -100,7 +100,7 @@ with col1:
         buffer_days = max(window_days * 2, 180)  # Minimal 180 hari buffer
         start_date = end_date - timedelta(days=buffer_days)
         
-        data = yf.download('GC=F', start=start_date, end=end_date, interval='1d')
+        data = yf.download('AAPL', start=start_date, end=end_date, interval='1d')
         
     if len(data) >= window_days:
         close_prices = data['Close'].dropna().values[-window_days:].flatten()
