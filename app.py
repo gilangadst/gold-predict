@@ -9,6 +9,40 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import requests
 
+def get_gold_data(start_date, end_date, metals_api_key):
+    # 1. Coba ambil data dari Yahoo Finance
+    try:
+        data = yf.download('GC=F', start=start_date, end=end_date, interval='1d')
+        if data is not None and not data.empty:
+            print("Data diambil dari Yahoo Finance")
+            return data
+        else:
+            print("Data Yahoo Finance kosong, fallback ke Metals-API")
+    except Exception as e:
+        print(f"Yahoo Finance error: {e}, fallback ke Metals-API")
+    # 2. Jika gagal, ambil dari Metals-API
+    url = 'https://metals-api.com/api/timeseries'
+    params = {
+        'access_key': metals_api_key,
+        'base': 'USD',
+        'symbols': 'XAU',
+        'start_date': str(start_date),
+        'end_date': str(end_date)
+    }
+    response = requests.get(url, params=params)
+    data_json = response.json()
+    if 'rates' in data_json:
+        prices = []
+        for date, rates in data_json['rates'].items():
+            prices.append({'Date': date, 'Close': rates['XAU']})
+        df = pd.DataFrame(prices)
+        df['Date'] = pd.to_datetime(df['Date'])
+        df.set_index('Date', inplace=True)
+        print("Data diambil dari Metals-API")
+        return df
+    else:
+        raise Exception("Gagal mengambil data dari kedua sumber!")
+
 st.set_page_config(page_title="Prediksi Harga Emas LSTM", layout="wide")
 
 # Header dengan styling
@@ -361,39 +395,3 @@ st.markdown("""
     <p>© 2025 Prediksi Harga Emas LSTM | Dibuat dengan Streamlit & TensorFlow</p>
 </div>
 """, unsafe_allow_html=True)
-
-def get_gold_data(start_date, end_date, metals_api_key):
-    import yfinance as yf
-    import pandas as pd
-    # 1. Coba ambil data dari Yahoo Finance
-    try:
-        data = yf.download('GC=F', start=start_date, end=end_date, interval='1d')
-        if data is not None and not data.empty:
-            print("Data diambil dari Yahoo Finance")
-            return data
-        else:
-            print("Data Yahoo Finance kosong, fallback ke Metals-API")
-    except Exception as e:
-        print(f"Yahoo Finance error: {e}, fallback ke Metals-API")
-    # 2. Jika gagal, ambil dari Metals-API
-    url = 'https://metals-api.com/api/timeseries'
-    params = {
-        'access_key': metals_api_key,
-        'base': 'USD',
-        'symbols': 'XAU',
-        'start_date': str(start_date),
-        'end_date': str(end_date)
-    }
-    response = requests.get(url, params=params)
-    data_json = response.json()
-    if 'rates' in data_json:
-        prices = []
-        for date, rates in data_json['rates'].items():
-            prices.append({'Date': date, 'Close': rates['XAU']})
-        df = pd.DataFrame(prices)
-        df['Date'] = pd.to_datetime(df['Date'])
-        df.set_index('Date', inplace=True)
-        print("Data diambil dari Metals-API")
-        return df
-    else:
-        raise Exception("Gagal mengambil data dari kedua sumber!")
