@@ -7,6 +7,8 @@ import yfinance as yf
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import os
+import requests
 
 st.set_page_config(page_title="Prediksi Harga Emas LSTM", layout="wide")
 
@@ -25,6 +27,26 @@ def load_lstm_model():
     return model
 
 model = load_lstm_model()
+
+# ====== KONFIGURASI API KEY TWELVE DATA ======
+TWELVE_DATA_API_KEY = os.getenv('TWELVE_DATA_API_KEY', 'f18bce1f9c6e475f8852f67591d6ccc0')  # Ganti dengan API key Anda
+
+# ====== FUNGSI AMBIL DATA DARI TWELVE DATA ======
+def get_gold_data_twelvedata(window_days=7):
+    url = f"https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=1day&outputsize={window_days}&apikey={TWELVE_DATA_API_KEY}"
+    try:
+        resp = requests.get(url, timeout=10)
+        data = resp.json()
+        if 'values' in data:
+            # Urutkan dari lama ke baru
+            values = list(reversed(data['values']))
+            close_prices = [float(v['close']) for v in values[-window_days:]]
+            dates = [pd.to_datetime(v['datetime']).date() for v in values[-window_days:]]
+            return close_prices, dates, 'Twelve Data'
+        else:
+            return None, None, None
+    except Exception as e:
+        return None, None, None
 
 # Sidebar untuk input parameter
 st.sidebar.markdown("### ⚙️ Parameter Prediksi")
@@ -92,27 +114,34 @@ col1, col2 = st.columns([2, 1])
 with col1:
     st.markdown("### 📊 Dashboard Prediksi")
     
-    # Ambil data dari Yahoo Finance
-    with st.spinner("🔄 Mengambil data dari Yahoo Finance..."):
+    # Ambil data dari Twelve Data, fallback ke Yahoo Finance
+    with st.spinner("🔄 Mengambil data harga emas..."):
         # Hitung periode yang diperlukan dengan buffer lebih besar
         end_date = datetime.now().date() + timedelta(days=1)
-        # Tambah buffer lebih besar untuk mengatasi hari libur
         buffer_days = max(window_days * 2, 180)  # Minimal 180 hari buffer
         start_date = end_date - timedelta(days=buffer_days)
-        
-        data = yf.download('GC=F', start=start_date, end=end_date, interval='1d')
-        
-    if len(data) >= window_days:
-        close_prices = data['Close'].dropna().values[-window_days:].flatten()
-        dates = data.index[-window_days:]
-        
+
+        # Coba ambil dari Twelve Data
+        close_prices, dates, data_source = get_gold_data_twelvedata(window_days)
+        if close_prices is None or len(close_prices) < window_days:
+            # Fallback ke Yahoo Finance
+            data = yf.download('GC=F', start=start_date, end=end_date, interval='1d')
+            if len(data) >= window_days:
+                close_prices = data['Close'].dropna().values[-window_days:].flatten()
+                dates = data.index[-window_days:]
+                data_source = 'Yahoo Finance'
+            else:
+                close_prices = None
+                dates = None
+                data_source = None
+
+    if close_prices is not None and len(close_prices) >= window_days:
         # Display data info
-        st.info(f"📊 Data {window_days} hari terakhir dari Yahoo Finance (GC=F)")
-        
+        st.info(f"📊 Data {window_days} hari terakhir dari {data_source}")
         # Create dataframe untuk display
         df_display = pd.DataFrame({
-            'Tanggal': [d.strftime('%Y-%m-%d') for d in dates],
-            'Harga Emas (USD)': close_prices.tolist()
+            'Tanggal': [d.strftime('%Y-%m-%d') if hasattr(d, 'strftime') else str(d) for d in dates],
+            'Harga Emas (USD)': close_prices
         })
         st.dataframe(df_display, use_container_width=True)
         
@@ -214,13 +243,13 @@ with col1:
         st.plotly_chart(fig, use_container_width=True)
         
     else:
-        st.error(f"❌ Data tidak cukup! Hanya tersedia {len(data)} hari, dibutuhkan minimal {window_days} hari.")
+        st.error(f"❌ Data tidak cukup! Hanya tersedia {len(data) if 'data' in locals() else 0} hari, dibutuhkan minimal {window_days} hari.")
         
         # Tampilkan opsi alternatif
         st.markdown("### 🔄 Opsi Alternatif:")
         
         # Hitung berapa hari yang tersedia
-        available_days = len(data)
+        available_days = len(data) if 'data' in locals() else 0
         
         if available_days >= 7:
             st.info(f"💡 **Saran**: Gunakan {available_days} hari yang tersedia atau pilih window yang lebih kecil")
