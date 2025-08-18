@@ -48,6 +48,20 @@ def get_gold_data_twelvedata(window_days=7):
     except Exception as e:
         return None, None, None
 
+@st.cache_data(ttl=300)
+def get_gold_data_twelvedata_cached(window_days=7):
+    return get_gold_data_twelvedata(window_days)
+
+@st.cache_data(ttl=300)
+def get_gold_data_yahoo_cached(start_date, end_date, window_days=7):
+    data = yf.download('GC=F', start=start_date, end=end_date, interval='1d')
+    if len(data) >= window_days:
+        close_prices = data['Close'].dropna().values[-window_days:].flatten()
+        dates = data.index[-window_days:]
+        return close_prices, dates
+    else:
+        return None, None
+
 # Sidebar untuk input parameter
 st.sidebar.markdown("### ⚙️ Parameter Prediksi")
 
@@ -121,19 +135,12 @@ with col1:
         buffer_days = max(window_days * 2, 180)  # Minimal 180 hari buffer
         start_date = end_date - timedelta(days=buffer_days)
 
-        # Coba ambil dari Twelve Data
-        close_prices, dates, data_source = get_gold_data_twelvedata(window_days)
+        # Coba ambil dari Twelve Data (cached)
+        close_prices, dates, data_source = get_gold_data_twelvedata_cached(window_days)
         if close_prices is None or len(close_prices) < window_days:
-            # Fallback ke Yahoo Finance
-            data = yf.download('GC=F', start=start_date, end=end_date, interval='1d')
-            if len(data) >= window_days:
-                close_prices = data['Close'].dropna().values[-window_days:].flatten()
-                dates = data.index[-window_days:]
-                data_source = 'Yahoo Finance'
-            else:
-                close_prices = None
-                dates = None
-                data_source = None
+            # Fallback ke Yahoo Finance (cached)
+            close_prices, dates = get_gold_data_yahoo_cached(start_date, end_date, window_days)
+            data_source = 'Yahoo Finance' if close_prices is not None else None
 
     if close_prices is not None and len(close_prices) >= window_days:
         # Display data info
