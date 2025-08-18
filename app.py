@@ -7,41 +7,6 @@ import yfinance as yf
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import requests
-
-def get_gold_data(start_date, end_date, metals_api_key):
-    # 1. Coba ambil data dari Yahoo Finance
-    try:
-        data = yf.download('GC=F', start=start_date, end=end_date, interval='1d')
-        if data is not None and not data.empty:
-            print("Data diambil dari Yahoo Finance")
-            return data
-        else:
-            print("Data Yahoo Finance kosong, fallback ke Metals-API")
-    except Exception as e:
-        print(f"Yahoo Finance error: {e}, fallback ke Metals-API")
-    # 2. Jika gagal, ambil dari Metals-API
-    url = 'https://metals-api.com/api/timeseries'
-    params = {
-        'access_key': metals_api_key,
-        'base': 'USD',
-        'symbols': 'XAU',
-        'start_date': str(start_date),
-        'end_date': str(end_date)
-    }
-    response = requests.get(url, params=params)
-    data_json = response.json()
-    if 'rates' in data_json:
-        prices = []
-        for date, rates in data_json['rates'].items():
-            prices.append({'Date': date, 'Close': rates['XAU']})
-        df = pd.DataFrame(prices)
-        df['Date'] = pd.to_datetime(df['Date'])
-        df.set_index('Date', inplace=True)
-        print("Data diambil dari Metals-API")
-        return df
-    else:
-        raise Exception("Gagal mengambil data dari kedua sumber!")
 
 st.set_page_config(page_title="Prediksi Harga Emas LSTM", layout="wide")
 
@@ -135,8 +100,7 @@ with col1:
         buffer_days = max(window_days * 2, 180)  # Minimal 180 hari buffer
         start_date = end_date - timedelta(days=buffer_days)
         
-        metals_api_key = 'YOUR_METALS_API_KEY'  # Ganti dengan API key Anda, atau ambil dari environment variable
-        data = get_gold_data(start_date, end_date, metals_api_key)
+        data = yf.download('GC=F', start=start_date, end=end_date, interval='1d')
         
     if len(data) >= window_days:
         close_prices = data['Close'].dropna().values[-window_days:].flatten()
