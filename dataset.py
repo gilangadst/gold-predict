@@ -2,7 +2,7 @@ import requests
 import pandas as pd
 
 # API Key
-api_key = "MASUKKAN_API_KEY_ANDA"
+api_key = "f18bce1f9c6e475f8852f67591d6ccc0"
 
 # Endpoint
 url = "https://api.twelvedata.com/time_series"
@@ -11,8 +11,8 @@ url = "https://api.twelvedata.com/time_series"
 params = {
     "symbol": "XAU/USD",        # emas
     "interval": "1day",         # interval harian
-    "start_date": "2023-01-01",
-    "end_date": "2023-12-31",
+    "start_date": "2005-01-01",
+    "end_date": "2025-08-01",
     "apikey": api_key,
     "format": "JSON"            # bisa JSON atau CSV
 }
@@ -29,4 +29,4 @@ df = df.sort_values('datetime')
 print(df.head())
 
 # Simpan ke CSV
-df.to_csv("emas_historis.csv", index=False)
+df.to_csv("dataset.csv", index=False)
