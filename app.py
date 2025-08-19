@@ -3,12 +3,11 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import load_model
-import yfinance as yf
+import requests
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import os
-import requests
 
 st.set_page_config(page_title="Prediksi Harga Emas LSTM", layout="wide")
 
@@ -51,16 +50,6 @@ def get_gold_data_twelvedata(window_days=7):
 @st.cache_data(ttl=300)
 def get_gold_data_twelvedata_cached(window_days=7):
     return get_gold_data_twelvedata(window_days)
-
-@st.cache_data(ttl=300)
-def get_gold_data_yahoo_cached(start_date, end_date, window_days=7):
-    data = yf.download('GC=F', start=start_date, end=end_date, interval='1d')
-    if len(data) >= window_days:
-        close_prices = data['Close'].dropna().values[-window_days:].flatten()
-        dates = data.index[-window_days:]
-        return close_prices, dates
-    else:
-        return None, None
 
 # Sidebar untuk input parameter
 st.sidebar.markdown("### ⚙️ Parameter Prediksi")
@@ -108,7 +97,7 @@ window_days = 7 # default: 30 hari terakhir
 st.sidebar.markdown("#### ℹ️ Info Data")
 st.sidebar.info("""
 **Catatan:**
-- Yahoo Finance menyediakan data trading days
+- Data dari Twelve Data (XAU/USD)
 - Hari libur dan weekend tidak termasuk
 - **Prediksi hanya 1 hari ke depan**
 """)
@@ -117,7 +106,7 @@ st.sidebar.info("""
 st.sidebar.markdown("#### 📈 Sumber Data")
 st.sidebar.info("""
 **Data Source:**
-- Yahoo Finance (GC=F)
+- Twelve Data (XAU/USD)
 - Data real-time harga emas
 - Update otomatis setiap hari
 """)
@@ -138,9 +127,10 @@ with col1:
         # Coba ambil dari Twelve Data (cached)
         close_prices, dates, data_source = get_gold_data_twelvedata_cached(window_days)
         if close_prices is None or len(close_prices) < window_days:
-            # Fallback ke Yahoo Finance (cached)
-            close_prices, dates = get_gold_data_yahoo_cached(start_date, end_date, window_days)
-            data_source = 'Yahoo Finance' if close_prices is not None else None
+            st.error(f"❌ Data tidak cukup! Hanya tersedia {len(close_prices) if close_prices is not None else 0} hari, dibutuhkan minimal {window_days} hari.")
+            st.stop()
+        else:
+            data_source = 'Twelve Data'
 
     if close_prices is not None and len(close_prices) >= window_days:
         # Display data info
@@ -250,21 +240,21 @@ with col1:
         st.plotly_chart(fig, use_container_width=True)
         
     else:
-        st.error(f"❌ Data tidak cukup! Hanya tersedia {len(data) if 'data' in locals() else 0} hari, dibutuhkan minimal {window_days} hari.")
+        st.error(f"❌ Data tidak cukup! Hanya tersedia {len(close_prices) if close_prices is not None else 0} hari, dibutuhkan minimal {window_days} hari.")
         
         # Tampilkan opsi alternatif
         st.markdown("### 🔄 Opsi Alternatif:")
         
         # Hitung berapa hari yang tersedia
-        available_days = len(data) if 'data' in locals() else 0
+        available_days = len(close_prices) if close_prices is not None else 0
         
         if available_days >= 7:
             st.info(f"💡 **Saran**: Gunakan {available_days} hari yang tersedia atau pilih window yang lebih kecil")
             
             # Tampilkan data yang tersedia
             if available_days > 0:
-                close_prices_available = data['Close'].dropna().values.flatten()
-                dates_available = data.index
+                close_prices_available = close_prices
+                dates_available = dates
                 
                 st.write(f"📊 Data {available_days} hari yang tersedia:")
                 df_available = pd.DataFrame({
