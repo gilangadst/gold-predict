@@ -29,7 +29,7 @@ def load_lstm_model():
 model = load_lstm_model()
 
 # ====== KONFIGURASI API KEY TWELVE DATA ======
-TWELVE_DATA_API_KEY = os.getenv('TWELVE_DATA_API_KEY', 'f18bce1f9c6e475f8852f67591d6ccc0')  # Ganti dengan API key Anda
+TWELVE_DATA_API_KEY = os.getenv('TWELVE_DATA_API_KEY', '')  # Ganti dengan API key Anda
 
 # ====== FUNGSI AMBIL DATA DARI TWELVE DATA ======
 def get_gold_data_twelvedata(window_days=7):
