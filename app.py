@@ -47,7 +47,7 @@ def get_gold_data_twelvedata(window_days=7):
     except Exception as e:
         return None, None, None
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=60)
 def get_gold_data_twelvedata_cached(window_days=7):
     return get_gold_data_twelvedata(window_days)
 
