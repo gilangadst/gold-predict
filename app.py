@@ -91,7 +91,7 @@ if target_date.weekday() >= 5:
 #     ],
 #     format_func=lambda x: x[1]
 # )
-window_days = 7 # default: 30 hari terakhir
+window_days = 30 # default: 30 hari terakhir
 
 # Info tentang data availability
 st.sidebar.markdown("#### ℹ️ Info Data")
