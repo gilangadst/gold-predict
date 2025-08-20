@@ -11,8 +11,8 @@ url = "https://api.twelvedata.com/time_series"
 params = {
     "symbol": "XAU/USD",        # emas
     "interval": "1day",         # interval harian
-    "start_date": "2005-01-01",
-    "end_date": "2025-08-01",
+    "start_date": "2006-07-31",
+    "end_date": "2025-07-31",
     "apikey": api_key,
     "format": "JSON"            # bisa JSON atau CSV
 }
