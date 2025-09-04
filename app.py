@@ -58,9 +58,9 @@ st.sidebar.markdown("### ⚙️ Parameter Prediksi")
 st.sidebar.markdown("#### 📅 Tanggal Target Prediksi")
 
 def next_weekday(d):
-    """Return the next weekday if the given date falls on a weekend"""
+    """Return the next weekday if the given date falls on a Sunday"""
     result = d
-    while result.weekday() >= 5:  # 5 = Sabtu, 6 = Minggu
+    while result.weekday() == 6:  # 6 = Minggu
         result += timedelta(days=1)
     return result
 
@@ -78,20 +78,11 @@ target_date = st.sidebar.date_input(
 )
 
 # Additional check for weekends (in case the date_input somehow returns a weekend)
-if target_date.weekday() >= 5:
+if target_date.weekday() == 6:
     st.sidebar.warning("Tanggal otomatis digeser ke hari kerja terdekat.")
     target_date = next_weekday(target_date)
 
-# 2. Pilihan window data historis
-# st.sidebar.markdown("#### 📊 Window Data Historis")
-# window_option = st.sidebar.selectbox(
-#     "Pilih periode data historis:",
-#     options=[
-#         ("7", "7 hari terakhir (Short-term)")
-#     ],
-#     format_func=lambda x: x[1]
-# )
-window_days = 7 # default: 30 hari terakhir
+window_days = 7
 
 # Info tentang data availability
 st.sidebar.markdown("#### ℹ️ Info Data")
