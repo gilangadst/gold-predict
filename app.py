@@ -5,11 +5,6 @@ from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import load_model
 import requests
 from datetime import datetime, timedelta
-# Tambahkan import untuk zona waktu
-try:
-    from zoneinfo import ZoneInfo  # Python 3.9+
-except ImportError:
-    from pytz import timezone as ZoneInfo  # fallback untuk pytz
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import os
@@ -45,8 +40,7 @@ def get_gold_data_twelvedata(window_days=7):
             # Urutkan dari lama ke baru
             values = list(reversed(data['values']))
             close_prices = [float(v['close']) for v in values[-window_days:]]
-            # Konversi waktu ke zona Sydney
-            dates = [pd.to_datetime(v['datetime']).tz_localize('UTC').tz_convert('Australia/Sydney').date() for v in values[-window_days:]]
+            dates = [pd.to_datetime(v['datetime']).date() for v in values[-window_days:]]
             return close_prices, dates, 'Twelve Data'
         else:
             return None, None, None
@@ -71,9 +65,7 @@ def next_weekday(d):
     return result
 
 # Calculate the target date once to ensure consistency
-# Ganti zona waktu ke Sydney
-tz_SYD = ZoneInfo('Australia/Sydney')
-tomorrow = datetime.now(tz_SYD).date() + timedelta(days=1)
+tomorrow = datetime.now().date() + timedelta(days=1)
 target_date_default = next_weekday(tomorrow)
 
 # Ensure all date values are the same for the date_input
@@ -119,7 +111,7 @@ with col1:
     # Ambil data dari Twelve Data, fallback ke Yahoo Finance
     with st.spinner("🔄 Mengambil data harga emas..."):
         # Hitung periode yang diperlukan dengan buffer lebih besar
-        end_date = datetime.now(tz_SYD).date() + timedelta(days=1)
+        end_date = datetime.now().date() + timedelta(days=1)
         buffer_days = max(window_days * 2, 180)  # Minimal 180 hari buffer
         start_date = end_date - timedelta(days=buffer_days)
 
