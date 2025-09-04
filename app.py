@@ -45,8 +45,8 @@ def get_gold_data_twelvedata(window_days=7):
             # Urutkan dari lama ke baru
             values = list(reversed(data['values']))
             close_prices = [float(v['close']) for v in values[-window_days:]]
-            # Konversi waktu ke zona New York
-            dates = [pd.to_datetime(v['datetime']).tz_localize('UTC').tz_convert('America/New_York').date() for v in values[-window_days:]]
+            # Konversi waktu ke zona Sydney
+            dates = [pd.to_datetime(v['datetime']).tz_localize('UTC').tz_convert('Australia/Sydney').date() for v in values[-window_days:]]
             return close_prices, dates, 'Twelve Data'
         else:
             return None, None, None
@@ -71,8 +71,9 @@ def next_weekday(d):
     return result
 
 # Calculate the target date once to ensure consistency
-tz_NY = ZoneInfo('America/New_York')
-tomorrow = datetime.now(tz_NY).date() + timedelta(days=1)
+# Ganti zona waktu ke Sydney
+tz_SYD = ZoneInfo('Australia/Sydney')
+tomorrow = datetime.now(tz_SYD).date() + timedelta(days=1)
 target_date_default = next_weekday(tomorrow)
 
 # Ensure all date values are the same for the date_input
@@ -118,7 +119,7 @@ with col1:
     # Ambil data dari Twelve Data, fallback ke Yahoo Finance
     with st.spinner("🔄 Mengambil data harga emas..."):
         # Hitung periode yang diperlukan dengan buffer lebih besar
-        end_date = datetime.now(tz_NY).date() + timedelta(days=1)
+        end_date = datetime.now(tz_SYD).date() + timedelta(days=1)
         buffer_days = max(window_days * 2, 180)  # Minimal 180 hari buffer
         start_date = end_date - timedelta(days=buffer_days)
 
